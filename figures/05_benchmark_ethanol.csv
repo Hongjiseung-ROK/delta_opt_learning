@@ -1,0 +1,2 @@
+molecule,rdkit_steps,rdkit_cpu_s,rdkit_ok,ml_steps,ml_cpu_s,ml_ok
+ethanol,5,55.0,True,4,46.0,True

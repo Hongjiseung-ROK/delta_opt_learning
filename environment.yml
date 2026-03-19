@@ -1,0 +1,18 @@
+name: delta_chem
+channels:
+  - conda-forge
+  - defaults
+dependencies:
+  - python=3.11
+  - rdkit
+  - xtb
+  - ase
+  - numpy
+  - scipy
+  - scikit-learn>=1.4
+  - pandas>=2.0
+  - joblib
+  - matplotlib
+  - pip
+  - pip:
+    - -e .

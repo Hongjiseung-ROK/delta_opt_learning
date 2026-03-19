@@ -1,0 +1,44 @@
+# Gaussian 생성 파일
+*.com
+*.log
+*.chk
+*.fchk
+*.xyz
+*.gjf
+*.out
+
+# xtb scratch
+xtbrestart
+xtbtopo.mol
+charges
+wbo
+.xtboptok
+pcharge
+energy
+gradient
+vibspectrum
+hessian
+g98.out
+
+# 데이터 (raw Gaussian 출력은 추적하지 않음)
+data/raw/
+data/features/
+
+# 모델 파일
+models/*.joblib
+models/*.pkl
+
+# Python
+__pycache__/
+*.pyc
+*.egg-info/
+dist/
+build/
+.eggs/
+
+# OS
+.DS_Store
+Thumbs.db
+
+# 노트북 체크포인트
+.ipynb_checkpoints/
