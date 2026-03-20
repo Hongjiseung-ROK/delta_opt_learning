@@ -180,13 +180,17 @@ Delta 모드에서 `mmff_length` 중요도가 81.3%로 낮아지고, `bond_order
 
 ![New Molecules Benchmark](figures/07_benchmark_new_mols.png)
 
-| 분자 | 작용기 | MMFF steps | ML steps | 변화 |
-|------|--------|-----------|---------|------|
-| cyclopentane | 5원 고리 | 5 | 6 | −1 (악화) |
-| 1-butanol | 긴 사슬 알코올 | 7 | 7 | 0 |
-| acetophenone | 방향족 케톤 | 4 | 4 | 0 |
-| acrolein | 공액 카보닐 | 5 | **4** | **+20%** |
-| dimethylsulfoxide | S=O 결합 | 6 | 6 | 0 |
+Delta 모드 모델로 재측정 (이전 absolute 모델 결과와 비교):
+
+| 분자 | 작용기 | MMFF steps | ML steps | 스텝 변화 | CPU 변화 |
+|------|--------|-----------|---------|---------|---------|
+| cyclopentane | 5원 고리 | 5 | 5 | 0 *(이전: −1 악화)* | **+7%** |
+| 1-butanol | 긴 사슬 알코올 | 7 | 7 | 0 | 0% |
+| acetophenone | 방향족 케톤 | 4 | 4 | 0 | +1% |
+| acrolein | 공액 카보닐 | 5 | **4** | **+20%** | **+19%** |
+| dimethylsulfoxide | S=O 결합 | 6 | 6 | 0 | **+8%** |
+
+Delta 모드에서 cyclopentane의 스텝 악화가 해소되었다. 보정값을 더 보수적으로 예측하여 5원 고리의 기하 왜곡이 줄어든 결과로 해석된다.
 
 ---
 
@@ -194,7 +198,7 @@ Delta 모드에서 `mmff_length` 중요도가 81.3%로 낮아지고, `bond_order
 
 ### 현재 한계
 
-1. **Feature 과의존**: `mmff_length` feature가 importance의 98.5%를 차지하여 사실상 선형 스케일링. 비선형 전자적 효과(공명, 전기음성도)를 학습하려면 수천 개 결합 데이터가 필요.
+1. **Feature 과의존**: Delta 모드 도입 후 `mmff_length` importance가 98.3% → 81.3%로 감소하였으나, 여전히 지배적이다. 비선형 전자적 효과(공명, 전기음성도)를 충분히 학습하려면 수천 개 결합 데이터가 필요.
 
 2. **단순한 feature**: 현재 feature는 국소적(local)이며 분자 전체의 전자 구조를 반영하지 못함. 이웃 원자 환경, 부분 전하, 공명 구조 등의 전역적 feature 추가가 필요.
 

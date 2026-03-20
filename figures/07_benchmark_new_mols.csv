@@ -1,11 +1,11 @@
 molecule,smiles,note,pipeline,converged,opt_steps,cpu_s
-cyclopentane,C1CCCC1,5원 고리 알케인 (훈련: cyclohexane만 있음),rdkit,True,5,53.0
-cyclopentane,C1CCCC1,5원 고리 알케인 (훈련: cyclohexane만 있음),ml,True,6,69.0
-1-butanol,CCCCO,탄소 4개 알코올 (훈련: 최대 1-propanol),rdkit,True,7,79.0
-1-butanol,CCCCO,탄소 4개 알코올 (훈련: 최대 1-propanol),ml,True,7,78.0
-acetophenone,CC(=O)c1ccccc1,"방향족 케톤 (Ar-C=O, 훈련에 없음)",rdkit,True,4,94.0
-acetophenone,CC(=O)c1ccccc1,"방향족 케톤 (Ar-C=O, 훈련에 없음)",ml,True,4,91.0
-acrolein,C=CC=O,"공액 카보닐 (C=C-C=O, 훈련에 없음)",rdkit,True,5,29.0
-acrolein,C=CC=O,"공액 카보닐 (C=C-C=O, 훈련에 없음)",ml,True,4,23.0
-dimethylsulfoxide,CS(C)=O,"설폭사이드 (S=O 결합, 훈련에 없음)",rdkit,True,6,40.0
-dimethylsulfoxide,CS(C)=O,"설폭사이드 (S=O 결합, 훈련에 없음)",ml,True,6,42.0
+cyclopentane,C1CCCC1,5원 고리 알케인 (훈련: cyclohexane만 있음),rdkit,True,5,60.0
+cyclopentane,C1CCCC1,5원 고리 알케인 (훈련: cyclohexane만 있음),ml,True,5,56.0
+1-butanol,CCCCO,탄소 4개 알코올 (훈련: 최대 1-propanol),rdkit,True,7,77.0
+1-butanol,CCCCO,탄소 4개 알코올 (훈련: 최대 1-propanol),ml,True,7,77.0
+acetophenone,CC(=O)c1ccccc1,"방향족 케톤 (Ar-C=O, 훈련에 없음)",rdkit,True,4,99.0
+acetophenone,CC(=O)c1ccccc1,"방향족 케톤 (Ar-C=O, 훈련에 없음)",ml,True,4,98.0
+acrolein,C=CC=O,"공액 카보닐 (C=C-C=O, 훈련에 없음)",rdkit,True,5,32.0
+acrolein,C=CC=O,"공액 카보닐 (C=C-C=O, 훈련에 없음)",ml,True,4,26.0
+dimethylsulfoxide,CS(C)=O,"설폭사이드 (S=O 결합, 훈련에 없음)",rdkit,True,6,49.0
+dimethylsulfoxide,CS(C)=O,"설폭사이드 (S=O 결합, 훈련에 없음)",ml,True,6,45.0
