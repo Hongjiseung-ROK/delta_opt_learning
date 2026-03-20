@@ -43,8 +43,12 @@ def train(
     model_out: str = "models/bond_length_corrector.joblib",
     n_estimators: int = 300,
     max_depth: int = 4,
+    exclude: list | None = None,
 ) -> None:
     df = pd.read_csv(features_csv)
+    if exclude:
+        df = df[~df["mol_name"].isin(exclude)]
+        print(f"제외 분자: {exclude}")
     print(f"데이터: {len(df)}행  {df['mol_name'].nunique()}개 분자")
     print(f"결합 유형 분포:\n{df.groupby(['elem1','elem2','bond_order']).size().to_string()}\n")
 
@@ -92,8 +96,9 @@ def main():
     parser.add_argument("--model-out", default="models/bond_length_corrector.joblib")
     parser.add_argument("--n-estimators", type=int, default=300)
     parser.add_argument("--max-depth", type=int, default=4)
+    parser.add_argument("--exclude", nargs="*", default=None, help="훈련에서 제외할 분자명 목록")
     args = parser.parse_args()
-    train(args.features, args.model_out, args.n_estimators, args.max_depth)
+    train(args.features, args.model_out, args.n_estimators, args.max_depth, args.exclude)
 
 
 if __name__ == "__main__":

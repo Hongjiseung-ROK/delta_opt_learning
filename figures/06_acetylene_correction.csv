@@ -1,0 +1,7 @@
+metric,MMFF,ML_corrected,DFT_reference,unit
+C≡C bond length,1.200302,1.205603,1.204971,Angstrom
+error vs DFT,0.004669,0.000632,0.000000,Angstrom
+error reduction (%),0,86.5,100,%
+gaussian_opt_steps,3,3,—,steps
+gaussian_cpu_time,9.0,9.0,—,seconds
+normal_termination,True,True,—,bool

@@ -5,6 +5,17 @@ from rdkit import Chem
 from rdkit.Chem import AllChem
 
 
+def mol_to_xyz(mol: Chem.Mol, xyz_path: str, title: str = "molecule") -> None:
+    """RDKit mol(conformer 포함) → XYZ 파일 저장. 여러 스크립트에서 공유."""
+    conf = mol.GetConformer()
+    with open(xyz_path, "w") as f:
+        f.write(f"{mol.GetNumAtoms()}\n{title}\n")
+        for i in range(mol.GetNumAtoms()):
+            a = mol.GetAtomWithIdx(i)
+            p = conf.GetAtomPosition(i)
+            f.write(f"{a.GetSymbol():2s}  {p.x:12.6f}  {p.y:12.6f}  {p.z:12.6f}\n")
+
+
 def smiles_to_xyz(smiles: str, xyz_path: str, mol_name: str = "molecule") -> None:
     """Convert SMILES to a 3D XYZ file using RDKit ETKDG."""
     mol = Chem.MolFromSmiles(smiles)

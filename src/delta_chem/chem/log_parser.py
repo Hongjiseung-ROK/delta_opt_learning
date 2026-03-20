@@ -28,7 +28,9 @@ def parse_log(log_path: str) -> GaussianResult:
     text = _read(log_path)
     normal_termination = "Normal termination of Gaussian" in text
     step_matches = re.findall(r"Step number\s+(\d+)\s+out of", text)
-    opt_steps = int(step_matches[-1]) if step_matches else 0
+    # opt freq 계산 시 freq 이후 추가 Berny 루프("Step number 1 out of 2")가
+    # 붙기 때문에 last 값이 아닌 max 값을 사용해야 실제 opt 스텝 수를 얻는다.
+    opt_steps = max(int(m) for m in step_matches) if step_matches else 0
     cpu_seconds = _parse_time(text, "Job cpu time:")
     return GaussianResult(
         log_path=log_path,
@@ -80,6 +82,46 @@ def parse_final_geometry(
                 x, y, z = float(m.group(2)), float(m.group(3)), float(m.group(4))
                 atoms.append((symbol, x, y, z))
 
+    return atoms
+
+
+def parse_input_geometry(
+    log_path: str,
+) -> list[tuple[str, float, float, float]]:
+    """
+    Gaussian .out에서 첫 번째 'Input orientation:' 블록을 파싱한다.
+
+    이 블록은 Gaussian에 제출된 초기 좌표(MMFF 구조)를 나타낸다.
+    Standard orientation과 동일한 테이블 형식이며, 원자 순서가 동일하다.
+    feature_extractor에서 ETKDGv3를 재실행하지 않고 이 값을 MMFF 좌표로 사용한다.
+    """
+    text = _read(log_path)
+    idx = text.find("Input orientation:")
+    if idx == -1:
+        return []
+
+    lines = text[idx:].splitlines()
+    sep_count = 0
+    in_data = False
+    row_pattern = re.compile(
+        r"^\s+\d+\s+(\d+)\s+\d+\s+([-\d.]+)\s+([-\d.]+)\s+([-\d.]+)"
+    )
+    atoms = []
+    for line in lines:
+        if "---" in line and line.strip().startswith("-"):
+            sep_count += 1
+            if sep_count == 3:
+                break
+            if sep_count == 2:
+                in_data = True
+            continue
+        if in_data:
+            m = row_pattern.match(line)
+            if m:
+                atomic_num = int(m.group(1))
+                symbol = _ATOMIC_NUMBER.get(atomic_num, f"X{atomic_num}")
+                x, y, z = float(m.group(2)), float(m.group(3)), float(m.group(4))
+                atoms.append((symbol, x, y, z))
     return atoms
 
 

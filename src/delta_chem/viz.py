@@ -174,6 +174,145 @@ def plot_benchmark(results: dict, conditions: list[str],
         savefig(fig, out_name)
 
 
+def plot_acetylene_correction(data: dict, out_name: str = "06_acetylene_correction.png") -> None:
+    """
+    Acetylene ML 보정 결과 4-패널 시각화.
+
+    data keys: mmff_length, ml_length, dft_length,
+               mmff_steps, ml_steps, mmff_cpu, ml_cpu
+               (mmff_steps=None 이면 비수렴)
+    """
+    mmff  = data["mmff_length"]
+    ml    = data["ml_length"]
+    dft   = data["dft_length"]
+    delta_mmff = abs(mmff - dft)
+    delta_ml   = abs(ml  - dft)
+
+    with plt.rc_context(STYLE):
+        fig = plt.figure(figsize=(12, 9))
+        fig.suptitle("Acetylene: ML Bond-Length Correction vs Gaussian DFT",
+                     fontsize=13, fontweight="bold", y=0.98)
+
+        # ── Panel 1: 결합 길이 비교 (수평 막대) ─────────────────────
+        ax1 = fig.add_subplot(2, 2, 1)
+        labels = ["MMFF\n(RDKit)", "ML-Corrected", "DFT Reference\n(B3LYP/6-31G(d))"]
+        values = [mmff, ml, dft]
+        colors = ["#5B9BD5", "#ED7D31", "#70AD47"]
+        bars = ax1.barh(labels, values, color=colors, edgecolor="white", height=0.5)
+        ax1.set_xlim(1.18, 1.22)
+        ax1.set_xlabel("C≡C Bond Length (Å)")
+        ax1.set_title("Bond Length Comparison")
+        for bar, val in zip(bars, values):
+            ax1.text(val + 0.0005, bar.get_y() + bar.get_height()/2,
+                     f"{val:.4f} Å", va="center", fontsize=9)
+        ax1.axvline(dft, color="#70AD47", lw=1.2, ls="--", alpha=0.6)
+
+        # ── Panel 2: 오차 비교 (로그 스케일 막대) ────────────────────
+        ax2 = fig.add_subplot(2, 2, 2)
+        err_labels = ["MMFF error", "ML error"]
+        err_vals   = [delta_mmff, delta_ml]
+        err_colors = ["#5B9BD5", "#ED7D31"]
+        bars2 = ax2.bar(err_labels, err_vals, color=err_colors, width=0.4, edgecolor="white")
+        ax2.set_ylabel("|Predicted − DFT| (Å)")
+        ax2.set_title("Error vs B3LYP/6-31G(d)")
+        ax2.axhline(0.005, color="red", lw=1, ls="--", label="Target < 0.005 Å")
+        ax2.legend(fontsize=8)
+        for bar, val in zip(bars2, err_vals):
+            ax2.text(bar.get_x() + bar.get_width()/2, val + 0.0001,
+                     f"{val:.4f} Å", ha="center", va="bottom", fontsize=9)
+        reduction = (1 - delta_ml / delta_mmff) * 100
+        ax2.set_title(f"Error vs DFT  ({reduction:.0f}% reduction by ML)")
+
+        # ── Panel 3: Gaussian 최적화 스텝/시간 비교 ──────────────────
+        ax3 = fig.add_subplot(2, 2, 3)
+        conds  = ["MMFF\n(RDKit)", "ML-Corrected"]
+        steps  = [data.get("mmff_steps"), data.get("ml_steps", 1)]
+        cpus   = [data.get("mmff_cpu"), data.get("ml_cpu", 9)]
+        step_display = [s if s is not None else 0 for s in steps]
+        bar_colors = ["#5B9BD5", "#ED7D31"]
+        b3 = ax3.bar(conds, step_display, color=bar_colors, width=0.4, edgecolor="white")
+        ax3.set_ylabel("Optimization Steps")
+        ax3.set_title("Gaussian Opt Steps")
+        ax3.yaxis.set_major_locator(ticker.MaxNLocator(integer=True))
+        for bar, s in zip(b3, steps):
+            label = "FAIL\n(non-conv.)" if s is None else str(s)
+            ax3.text(bar.get_x() + bar.get_width()/2,
+                     bar.get_height() + 0.05,
+                     label, ha="center", va="bottom", fontsize=9,
+                     color="red" if s is None else "black")
+
+        # ── Panel 4: 보정 경로 (화살표 다이어그램) ─────────────────
+        ax4 = fig.add_subplot(2, 2, 4)
+        ax4.set_xlim(0, 3)
+        ax4.set_ylim(1.195, 1.215)
+        ax4.set_yticks([mmff, ml, dft])
+        ax4.set_yticklabels([f"MMFF\n{mmff:.4f} Å", f"ML\n{ml:.4f} Å", f"DFT\n{dft:.4f} Å"],
+                            fontsize=8)
+        ax4.set_xticks([])
+        ax4.set_title("Correction Pathway  (C≡C)")
+        ax4.set_ylabel("Bond Length (Å)")
+
+        # MMFF → ML 화살표
+        ax4.annotate("", xy=(1.5, ml), xytext=(1.5, mmff),
+                     arrowprops=dict(arrowstyle="->", color="#ED7D31", lw=2))
+        ax4.text(1.6, (mmff + ml)/2, f"+{ml-mmff:.4f} Å\n(ML)", fontsize=8, color="#ED7D31")
+
+        # ML vs DFT 잔차
+        ax4.annotate("", xy=(2.3, dft), xytext=(2.3, ml),
+                     arrowprops=dict(arrowstyle="<->", color="#70AD47", lw=1.5, ls="dashed"))
+        ax4.text(2.35, (ml + dft)/2, f"Δ={delta_ml:.4f} Å", fontsize=8, color="#70AD47")
+
+        # 수평 기준선
+        for y, c in [(mmff, "#5B9BD5"), (ml, "#ED7D31"), (dft, "#70AD47")]:
+            ax4.axhline(y, color=c, lw=0.8, ls=":")
+
+        fig.tight_layout(rect=[0, 0, 1, 0.96])
+        savefig(fig, out_name)
+
+
+def save_acetylene_csv(data: dict, out_name: str = "06_acetylene_correction.csv") -> None:
+    """Acetylene 보정 결과 CSV 저장."""
+    import csv
+    path = FIGURES_DIR / out_name
+    FIGURES_DIR.mkdir(exist_ok=True)
+    rows = [
+        ["metric", "MMFF", "ML_corrected", "DFT_reference", "unit"],
+        ["C≡C bond length",
+         f"{data['mmff_length']:.6f}",
+         f"{data['ml_length']:.6f}",
+         f"{data['dft_length']:.6f}",
+         "Angstrom"],
+        ["error vs DFT",
+         f"{abs(data['mmff_length'] - data['dft_length']):.6f}",
+         f"{abs(data['ml_length']   - data['dft_length']):.6f}",
+         "0.000000",
+         "Angstrom"],
+        ["error reduction (%)",
+         "0",
+         f"{(1 - abs(data['ml_length']-data['dft_length']) / abs(data['mmff_length']-data['dft_length']))*100:.1f}",
+         "100",
+         "%"],
+        ["gaussian_opt_steps",
+         str(data.get("mmff_steps", "FAIL")),
+         str(data.get("ml_steps", "")),
+         "—",
+         "steps"],
+        ["gaussian_cpu_time",
+         str(data.get("mmff_cpu", "FAIL")),
+         f"{data.get('ml_cpu', ''):.1f}" if data.get("ml_cpu") else "FAIL",
+         "—",
+         "seconds"],
+        ["normal_termination",
+         str(data.get("mmff_converged", False)),
+         str(data.get("ml_converged", True)),
+         "—",
+         "bool"],
+    ]
+    with open(path, "w", newline="", encoding="utf-8") as f:
+        csv.writer(f).writerows(rows)
+    print(f"  Acetylene CSV 저장: {path}")
+
+
 def save_benchmark_csv(results: dict, conditions: list[str],
                         out_name: str = "05_benchmark.csv") -> None:
     import csv

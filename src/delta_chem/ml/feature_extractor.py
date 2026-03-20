@@ -4,15 +4,18 @@ MMFF 좌표 + Gaussian DFT 최종 좌표 → bond feature DataFrame
 각 결합마다 한 행을 생성한다:
   elem1, elem2, bond_order, hybridization_1, hybridization_2,
   is_in_ring, ring_size, mmff_length → dft_length  (학습 타겟)
+
+MMFF 좌표는 Gaussian .out의 'Input orientation:' 블록(첫 번째 occurrence)에서
+직접 파싱한다. ETKDGv3를 재실행하면 난수 시드에 따라 다른 conformer가 생성될 수
+있어 Gaussian에 실제로 제출된 구조와 불일치가 발생한다.
 """
 import numpy as np
 import pandas as pd
 from pathlib import Path
 from rdkit import Chem
-from rdkit.Chem import AllChem, rdMolDescriptors
+from rdkit.Chem import AllChem
 
-from delta_chem.chem.smiles_to_xyz import smiles_to_xyz
-from delta_chem.chem.log_parser import parse_final_geometry
+from delta_chem.chem.log_parser import parse_input_geometry, parse_final_geometry
 
 
 _HYB_MAP = {
@@ -30,54 +33,58 @@ def extract_bond_features(
     """
     한 분자에 대해 bond feature 행들을 반환한다.
 
+    MMFF 좌표: Gaussian .out의 Input orientation(첫 번째 블록) 사용
+    DFT 좌표:  Gaussian .out의 Standard orientation(마지막 블록) 사용
+
     원자 인덱스 정렬 보장:
-    - smiles_to_xyz()가 H 추가 후 mol의 원자 순서대로 XYZ를 씀
-    - gaussian_writer.py가 동일 XYZ 순서로 .com을 생성
-    - Gaussian의 Standard orientation Center Number = 해당 순서 그대로
-    따라서 RDKit mol의 GetAtomWithIdx(i) ↔ Gaussian Center i+1 이 대응된다.
+    - smiles_to_xyz()가 RDKit mol 원자 순서로 XYZ를 씀
+    - gaussian_writer.py가 동일 순서로 .com을 생성
+    - Gaussian의 Center Number = 해당 순서 그대로
+    → RDKit mol.GetAtomWithIdx(i) ↔ Gaussian Center i+1
     """
-    # 1. RDKit mol 생성 + MMFF 최적화
+    # 1. RDKit mol (결합 위상 정보만 필요, 3D 좌표는 .out에서 읽음)
     mol = Chem.MolFromSmiles(smiles)
     if mol is None:
         return pd.DataFrame()
     mol = Chem.AddHs(mol)
-    if AllChem.EmbedMolecule(mol, AllChem.ETKDGv3()) != 0:
+
+    # 2. MMFF 초기 좌표: Input orientation (Gaussian에 실제 제출된 구조)
+    mmff_atoms = parse_input_geometry(gaussian_out_path)
+    if not mmff_atoms or len(mmff_atoms) != mol.GetNumAtoms():
         return pd.DataFrame()
-    AllChem.MMFFOptimizeMolecule(mol)
-    conf = mol.GetConformer()
+    mmff_coords = np.array([[x, y, z] for _, x, y, z in mmff_atoms])
 
-    mmff_coords = np.array([conf.GetAtomPosition(i) for i in range(mol.GetNumAtoms())])
-
-    # 2. DFT 최종 좌표
+    # 3. DFT 최종 좌표: Standard orientation (마지막 블록)
     dft_atoms = parse_final_geometry(gaussian_out_path)
-    if not dft_atoms:
+    if not dft_atoms or len(dft_atoms) != mol.GetNumAtoms():
         return pd.DataFrame()
-    if len(dft_atoms) != mol.GetNumAtoms():
-        return pd.DataFrame()  # 원자 수 불일치: 건너뜀
-
     dft_coords = np.array([[x, y, z] for _, x, y, z in dft_atoms])
 
-    # 3. 링 정보
-    ring_info = mol.GetRingInfo()
+    # 4. 혼성화 정보: ETKDGv3로 임시 conformer 생성 (위상/혼성화 파악용만)
+    mol_3d = Chem.RWMol(mol)
+    AllChem.EmbedMolecule(mol_3d, AllChem.ETKDGv3())
+    AllChem.MMFFOptimizeMolecule(mol_3d)
+
+    ring_info = mol_3d.GetRingInfo()
 
     rows = []
-    for bond in mol.GetBonds():
+    for bond in mol_3d.GetBonds():
         i, j = bond.GetBeginAtomIdx(), bond.GetEndAtomIdx()
-        atom_i = mol.GetAtomWithIdx(i)
-        atom_j = mol.GetAtomWithIdx(j)
+        atom_i = mol_3d.GetAtomWithIdx(i)
+        atom_j = mol_3d.GetAtomWithIdx(j)
 
         elem_pair = sorted([atom_i.GetSymbol(), atom_j.GetSymbol()])
         bond_order = _bond_order(bond.GetBondType())
         hyb_i = _HYB_MAP.get(atom_i.GetHybridization(), "OTHER")
         hyb_j = _HYB_MAP.get(atom_j.GetHybridization(), "OTHER")
 
-        # 링 소속 여부 및 최소 링 크기
         in_ring = bond.IsInRing()
         ring_size = 0
         if in_ring:
-            sizes = [r for r in ring_info.BondRingSizes(bond.GetIdx())]
+            sizes = ring_info.BondRingSizes(bond.GetIdx())
             ring_size = min(sizes) if sizes else 0
 
+        # 좌표는 .out에서 파싱한 값 사용
         mmff_len = float(np.linalg.norm(mmff_coords[i] - mmff_coords[j]))
         dft_len  = float(np.linalg.norm(dft_coords[i]  - dft_coords[j]))
 
@@ -102,7 +109,7 @@ def extract_bond_features(
 def build_dataset(
     results_dir: str,
     molecule_list: list[tuple[str, str]],  # [(name, smiles), ...]
-    condition: str = "rdkit",              # "rdkit" or "xtb"
+    condition: str = "rdkit",
     output_csv: str = "data/features/bond_features.csv",
 ) -> pd.DataFrame:
     """
