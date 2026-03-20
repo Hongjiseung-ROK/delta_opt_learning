@@ -35,7 +35,10 @@ def correct_geometry(mol: Chem.Mol, model_path: str) -> Chem.Mol:
     Returns:
         보정된 좌표를 가진 mol (원본 mol 객체는 변경하지 않음)
     """
-    pipe = _load_model(model_path)
+    artifact = _load_model(model_path)
+    pipe = artifact["pipeline"]
+    target_mode = artifact["target_mode"]
+
     conf = mol.GetConformer()
     coords = np.array([conf.GetAtomPosition(i) for i in range(mol.GetNumAtoms())])
     ring_info = mol.GetRingInfo()
@@ -70,12 +73,16 @@ def correct_geometry(mol: Chem.Mol, model_path: str) -> Chem.Mol:
 
     # 단일 배치 예측
     df_all = pd.DataFrame(rows)
-    pred_lens = pipe.predict(df_all)
+    pred_vals = pipe.predict(df_all)
 
     # 결합별 스케일 비율 계산
     scale: dict[tuple[int, int], float] = {}
-    for (i, j, mmff_len), pred_len in zip(bond_indices, pred_lens):
-        s = float(pred_len) / mmff_len if mmff_len > 1e-6 else 1.0
+    for (i, j, mmff_len), pred_val in zip(bond_indices, pred_vals):
+        if target_mode == "delta":
+            pred_len = mmff_len + float(pred_val)
+        else:
+            pred_len = float(pred_val)
+        s = pred_len / mmff_len if mmff_len > 1e-6 else 1.0
         scale[(i, j)] = s
         scale[(j, i)] = s
 

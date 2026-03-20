@@ -55,7 +55,8 @@ delta_chem/
 │   ├── pipeline.py             # CLI: SMILES → .com (--ml-correct 플래그)
 │   ├── collect_data.py         # 50개 분자 Gaussian 계산 (rdkit 조건)
 │   ├── extract_features.py     # data/raw/ → data/features/bond_features.csv
-│   ├── train_model.py          # bond_features.csv → models/*.joblib
+│   ├── train_model.py          # bond_features.csv → models/*.joblib (기본: --target-mode delta)
+│   ├── compare_target_modes.py # absolute vs delta 타겟 모드 비교 분석
 │   ├── benchmark.py            # 조건별 Gaussian 비교 (rdkit/ml)
 │   ├── benchmark_new_mols.py   # 훈련 미사용 5개 분자 벤치마크
 │   └── benchmark_acetylene.py  # Acetylene 케이스 스터디 (MMFF vs ML)
@@ -72,10 +73,12 @@ delta_chem/
 ## ML Model Architecture
 
 - **입력 feature** (결합 1개당): `elem1`, `elem2`, `bond_order`, `hybridization_1`, `hybridization_2`, `is_in_ring`, `ring_size`, `mmff_length`
-- **출력**: `dft_length` (B3LYP/6-31G(d) 평형 결합 길이, Å)
+- **출력**: `dft_length - mmff_length` (delta 모드, 기본값) 또는 `dft_length` (absolute 모드)
 - **모델**: `sklearn.GradientBoostingRegressor` (n_estimators=300, max_depth=4, lr=0.05, subsample=0.8) + `OrdinalEncoder` Pipeline
-- **5-Fold CV MAE**: 0.0026 ± 0.0009 Å (목표: < 0.005 Å)
+- **모델 artifact**: `{"pipeline": pipe, "target_mode": "delta"|"absolute"}` 딕셔너리로 저장
+- **5-Fold CV MAE**: delta 0.0022 ± 0.0004 Å / absolute 0.0026 ± 0.0009 Å (목표: < 0.005 Å)
 - **학습 데이터**: 49개 분자, 529개 결합 (acetylene 제외)
+- delta 모드가 CV MAE 16% 개선, `bond_order`·`elem2` 등 화학적 feature 기여 증가
 
 ## Gaussian 09 주의사항
 
@@ -104,6 +107,6 @@ delta_chem/
 ```
 1. scripts/collect_data.py                      # Gaussian rdkit 조건 실행
 2. scripts/extract_features.py                  # .out → bond_features.csv
-3. scripts/train_model.py --exclude acetylene   # 모델 학습
+3. scripts/train_model.py --exclude acetylene --target-mode delta  # 모델 학습 (delta 모드 권장)
 4. scripts/benchmark_new_mols.py               # 훈련 미사용 분자로 검증
 ```
