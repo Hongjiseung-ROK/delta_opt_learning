@@ -1,11 +1,19 @@
-# Gaussian 생성 파일
-*.com
-*.log
-*.chk
-*.fchk
-*.xyz
-*.gjf
-*.out
+# Gaussian 생성 파일 (루트 레벨만 제외, data/raw/ 는 추적)
+/*.com
+/*.log
+/*.chk
+/*.fchk
+/*.xyz
+/*.gjf
+/*.out
+
+# Gaussian 스크래치/임시 파일 (어디서든 제외)
+Gau-*.d2e
+Gau-*.int
+Gau-*.rwf
+Gau-*.skr
+Gau-*.inp
+xtbopt.log
 
 # xtb scratch
 xtbrestart
@@ -20,13 +28,7 @@ vibspectrum
 hessian
 g98.out
 
-# 데이터 (raw Gaussian 출력은 추적하지 않음)
-data/raw/
-data/features/
 
-# 모델 파일
-models/*.joblib
-models/*.pkl
 
 # Python
 __pycache__/
