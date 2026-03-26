@@ -1,18 +1,21 @@
 name: delta_chem
+# Linux (CentOS 7 / glibc 2.17) 환경 — pip wheel 버전 고정
+# conda는 Python 설치용으로만 사용하고 나머지는 pip으로 설치
 channels:
-  - conda-forge
   - defaults
 dependencies:
   - python=3.11
-  - rdkit
-  - xtb
-  - ase
-  - numpy
-  - scipy
-  - scikit-learn>=1.4
-  - pandas>=2.0
-  - joblib
-  - matplotlib
   - pip
   - pip:
+    - "numpy<2"           # manylinux2014 wheel (numpy 2.x는 glibc>=2.28 필요)
+    - "scipy==1.11.4"     # manylinux2014 wheel
+    - "scikit-learn==1.5.2"  # manylinux2014 wheel
+    - "pandas==2.2.3"     # manylinux2014 wheel
+    - rdkit
+    - joblib
+    - matplotlib
+    - ase
+    - jupyterlab
+    - ipykernel
+    - --only-binary :all:
     - -e .

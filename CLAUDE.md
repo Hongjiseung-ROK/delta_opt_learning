@@ -8,7 +8,7 @@ Undergraduate research: build a GradientBoosting ML model that corrects MMFF bon
 
 **Full pipeline:**
 ```
-SMILES → RDKit ETKDG+MMFF → ML bond length correction → Gaussian .com → Gaussian 09
+SMILES → RDKit ETKDG+MMFF → ML bond length correction → Gaussian .com → Gaussian 16
 ```
 
 ## Environment Setup
@@ -29,11 +29,71 @@ conda run -n delta_chem python scripts/benchmark_new_mols.py
 conda run -n delta_chem python scripts/benchmark_acetylene.py
 ```
 
-## Local Paths (Windows)
+## 서버 경로 및 Gaussian 16 실행 환경
 
-- Gaussian 09: `C:\G09W\g09.exe` — 환경변수 `DELTA_G09_EXE`로 오버라이드
-- xtb: `C:\Users\1172\miniconda3\envs\delta_chem\Library\bin\xtb.exe` — `DELTA_XTB_EXE`로 오버라이드 (현재 미사용)
+- **서버**: CentOS 7, 20코어, RAM 62GB
+- **Gaussian 16 실행파일**: `/opt/gaussian/g16/g16`
+- **g16 환경 프로파일**: `/opt/gaussian/g16/bsd/g16.profile`
+- xtb: 미사용 — `DELTA_XTB_EXE`로 오버라이드 가능
 - 모든 경로 상수: `src/delta_chem/config.py`
+
+### Gaussian 16 환경변수 설정
+
+g16 실행 전 반드시 `GAUSS_EXEDIR`에 `bsd` 경로를 포함해야 한다 (없으면 실행 실패):
+
+```bash
+export g16root=/opt/gaussian
+source /opt/gaussian/g16/bsd/g16.profile
+# 결과: GAUSS_EXEDIR=/opt/gaussian/g16/bsd:/opt/gaussian/g16
+```
+
+또는 환경변수 직접 지정:
+```bash
+export GAUSS_EXEDIR=/opt/gaussian/g16/bsd:/opt/gaussian/g16
+```
+
+`config.py`는 이미 올바른 값으로 설정되어 있으므로 Python 스크립트에서는 별도 설정 불필요.
+
+### .com 파일 리소스 설정 (20코어 노드 기준)
+
+```
+%NProcShared=20
+%Mem=56GB
+```
+
+`gaussian_writer.py`의 `nproc`, `mem` 인자로 제어. 기본값은 각 스크립트에서 지정.
+
+### Gaussian 16 on Linux 출력 파일
+
+- Linux g16은 `<name>.log` 파일로 출력한다 (`stdout`은 비어 있음)
+- `gaussian_runner.py`는 `.log` → `.out` 순으로 탐색하므로 별도 처리 불필요
+- `data/raw/`에 기존재하는 `.out` 파일들은 **Windows Gaussian 09**로 생성된 것으로 포맷 동일
+
+### Scratch 디렉토리
+
+서버에 `/scratch` 없음. 기본 scratch는 `.com` 파일과 같은 디렉토리(cwd).
+대용량 계산 시 `/tmp` 사용 권장:
+```bash
+export GAUSS_SCRDIR=/tmp
+```
+
+### SGE 클러스터 구성
+
+- SGE 실행파일: `/opt/sge/bin/lx-amd64/` (PATH에 없으므로 직접 지정 필요)
+- 큐 확인: `/opt/sge/bin/lx-amd64/qstat -f`
+
+| 큐 | 노드 | 코어/노드 | 비고 |
+|---|---|---|---|
+| `20core.q` | node02~06 (5개) | 20코어 | 사용자 지정 노드 |
+| `40core.q` | node07~20 (14개) | 40코어 | 타 사용자 점유 중 |
+
+```bash
+# 큐 상태 확인
+/opt/sge/bin/lx-amd64/qstat -f
+
+# 잡 제출 예시 (20core.q 지정)
+/opt/sge/bin/lx-amd64/qsub -q 20core.q -pe smp 20 -cwd job.sh
+```
 
 ## Repository Structure
 
@@ -80,11 +140,12 @@ delta_chem/
 - **학습 데이터**: 49개 분자, 529개 결합 (acetylene 제외)
 - delta 모드가 CV MAE 16% 개선, `bond_order`·`elem2` 등 화학적 feature 기여 증가
 
-## Gaussian 09 주의사항
+## Gaussian 주의사항
 
-- Gaussian 09 on Windows는 stdout 대신 `<name>.out` 파일에 직접 쓴다
+- Gaussian 16 on Linux는 stdout 대신 `<name>.log` 파일에 출력한다
 - subprocess 호출 시 반드시 `cwd=com_dir`로 설정하고 파일명만 넘겨야 경로 중복 버그가 없다
-- `Job cpu time:` 을 벽시계 시간 대용으로 사용 (Elapsed time 없음)
+- `Elapsed time:` 줄이 실제 벽시계 시간 (Gaussian 16 on Linux에서 존재)
+- `Job cpu time:` 은 코어×시간 합산값 — `log_parser.py`의 `cpu_seconds`는 이 값을 파싱함
 - 최적화 스텝: `"Step number N out of"` 패턴의 **max 값** 사용 (last 값 아님)
   → `opt freq` 계산 시 freq 이후 추가 Berny 루프가 "Step number 1 out of 2"를 생성하므로,
      max()를 써야 실제 최적화 스텝 수를 얻는다

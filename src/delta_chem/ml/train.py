@@ -18,7 +18,8 @@ from sklearn.preprocessing import OrdinalEncoder
 
 
 CAT_FEATURES = ["elem1", "elem2", "hybridization_1", "hybridization_2"]
-NUM_FEATURES = ["bond_order", "is_in_ring", "ring_size", "mmff_length"]
+NUM_FEATURES = ["bond_order", "is_in_ring", "ring_size",
+                "mmff_length", "mmff_angle_1", "mmff_angle_2"]
 
 
 def build_pipeline(n_estimators: int = 300, max_depth: int = 4) -> Pipeline:

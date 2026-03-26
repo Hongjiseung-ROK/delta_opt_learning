@@ -12,7 +12,7 @@ from rdkit import Chem
 from rdkit.Chem import AllChem
 from rdkit.Geometry import rdGeometry
 
-from delta_chem.ml.feature_extractor import _bond_order, _HYB_MAP
+from delta_chem.ml.feature_extractor import _bond_order, _HYB_MAP, _mean_angle_at
 
 # 모듈 레벨 캐시: 같은 경로의 모델은 한 번만 로드한다
 _model_cache: dict[str, object] = {}
@@ -59,6 +59,14 @@ def correct_geometry(mol: Chem.Mol, model_path: str) -> Chem.Mol:
             ring_size = min(sizes) if sizes else 0
         mmff_len = float(np.linalg.norm(coords[i] - coords[j]))
 
+        # 결합각 feature (각도 포함 모델용; 구 모델은 ColumnTransformer에서 무시됨)
+        ang_i = _mean_angle_at(i, j, coords, mol)
+        ang_j = _mean_angle_at(j, i, coords, mol)
+        if ai.GetSymbol() == elem_pair[0]:
+            mmff_angle_1, mmff_angle_2 = ang_i, ang_j
+        else:
+            mmff_angle_1, mmff_angle_2 = ang_j, ang_i
+
         rows.append({
             "elem1":           elem_pair[0],
             "elem2":           elem_pair[1],
@@ -68,6 +76,8 @@ def correct_geometry(mol: Chem.Mol, model_path: str) -> Chem.Mol:
             "is_in_ring":      int(in_ring),
             "ring_size":       ring_size,
             "mmff_length":     mmff_len,
+            "mmff_angle_1":    mmff_angle_1,
+            "mmff_angle_2":    mmff_angle_2,
         })
         bond_indices.append((i, j, mmff_len))
 

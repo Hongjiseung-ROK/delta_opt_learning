@@ -1,4 +1,7 @@
-# Gaussian 생성 파일 (루트 레벨만 제외, data/raw/ 는 추적)
+# Gaussian 계산 파일 (data/raw/ 전체 제외)
+data/raw/
+
+# Gaussian 생성 파일 (루트 레벨)
 /*.com
 /*.log
 /*.chk
@@ -6,6 +9,12 @@
 /*.xyz
 /*.gjf
 /*.out
+
+# 학습된 모델 (용량 큰 바이너리)
+models/
+
+# Feature CSV (재생성 가능)
+data/features/
 
 # Gaussian 스크래치/임시 파일 (어디서든 제외)
 Gau-*.d2e

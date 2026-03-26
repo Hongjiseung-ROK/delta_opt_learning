@@ -25,6 +25,25 @@ _HYB_MAP = {
 }
 
 
+def _mean_angle_at(center: int, exclude: int, coords: np.ndarray, mol) -> float:
+    """
+    center 원자를 꼭짓점으로 하는 결합각들의 평균을 반환한다.
+    exclude: 결합 상대방 원자 (이미 bond 방향으로 고정된 쪽)
+    이웃이 exclude 하나뿐이면 0.0 반환 (terminal atom).
+    """
+    neighbors = [nb.GetIdx() for nb in mol.GetAtomWithIdx(center).GetNeighbors()
+                 if nb.GetIdx() != exclude]
+    if not neighbors:
+        return 0.0
+    angles = []
+    for nb in neighbors:
+        v1 = coords[exclude] - coords[center]
+        v2 = coords[nb]      - coords[center]
+        cos_a = np.dot(v1, v2) / (np.linalg.norm(v1) * np.linalg.norm(v2) + 1e-12)
+        angles.append(np.degrees(np.arccos(np.clip(cos_a, -1.0, 1.0))))
+    return float(np.mean(angles))
+
+
 def extract_bond_features(
     smiles: str,
     gaussian_out_path: str,
@@ -88,6 +107,20 @@ def extract_bond_features(
         mmff_len = float(np.linalg.norm(mmff_coords[i] - mmff_coords[j]))
         dft_len  = float(np.linalg.norm(dft_coords[i]  - dft_coords[j]))
 
+        # 결합각: 각 끝점에서 이 결합을 포함하는 각도들의 평균 (MMFF 기준)
+        mmff_ang_i = _mean_angle_at(i, j, mmff_coords, mol_3d)
+        mmff_ang_j = _mean_angle_at(j, i, mmff_coords, mol_3d)
+        dft_ang_i  = _mean_angle_at(i, j, dft_coords,  mol_3d)
+        dft_ang_j  = _mean_angle_at(j, i, dft_coords,  mol_3d)
+
+        # elem_pair 정렬에 맞게 1/2 할당
+        if atom_i.GetSymbol() == elem_pair[0]:
+            mmff_angle_1, mmff_angle_2 = mmff_ang_i, mmff_ang_j
+            dft_angle_1,  dft_angle_2  = dft_ang_i,  dft_ang_j
+        else:
+            mmff_angle_1, mmff_angle_2 = mmff_ang_j, mmff_ang_i
+            dft_angle_1,  dft_angle_2  = dft_ang_j,  dft_ang_i
+
         rows.append({
             "mol_name":        mol_name,
             "smiles":          smiles,
@@ -100,7 +133,11 @@ def extract_bond_features(
             "is_in_ring":      int(in_ring),
             "ring_size":       ring_size,
             "mmff_length":     mmff_len,
+            "mmff_angle_1":    mmff_angle_1,
+            "mmff_angle_2":    mmff_angle_2,
             "dft_length":      dft_len,
+            "dft_angle_1":     dft_angle_1,
+            "dft_angle_2":     dft_angle_2,
         })
 
     return pd.DataFrame(rows)
@@ -120,9 +157,15 @@ def build_dataset(
     all_rows = []
 
     for name, smiles in molecule_list:
-        out_path = results_dir / name / f"{name}_{condition}.out"
-        if not out_path.exists():
-            print(f"  [skip] {name}: {out_path} 없음")
+        # Gaussian 16 on Linux → .log, Windows g09 → .out
+        out_path = None
+        for suffix in (".log", ".out"):
+            candidate = results_dir / name / f"{name}_{condition}{suffix}"
+            if candidate.exists() and candidate.stat().st_size > 0:
+                out_path = candidate
+                break
+        if out_path is None:
+            print(f"  [skip] {name}: 출력 파일 없음 (.log/.out)")
             continue
 
         df = extract_bond_features(smiles, str(out_path), mol_name=name)
