@@ -1,21 +1,21 @@
 molecule,smiles,note,pipeline,converged,opt_steps,cpu_s
 cyclopentane,C1CCCC1,5원 고리 알케인 (훈련: cyclohexane만),rdkit,True,5,60.0
-cyclopentane,C1CCCC1,5원 고리 알케인 (훈련: cyclohexane만),ml,True,5,56.0
-cyclopentane,C1CCCC1,5원 고리 알케인 (훈련: cyclohexane만),ml_exp,True,5,418.7
-cyclopentane,C1CCCC1,5원 고리 알케인 (훈련: cyclohexane만),gnn,True,5,393.2
+cyclopentane,C1CCCC1,5원 고리 알케인 (훈련: cyclohexane만),gbm_50,True,5,439.6
+cyclopentane,C1CCCC1,5원 고리 알케인 (훈련: cyclohexane만),gbm_full,True,5,425.8
+cyclopentane,C1CCCC1,5원 고리 알케인 (훈련: cyclohexane만),gnn_full,True,5,396.8
 1-butanol,CCCCO,C4 알코올 (훈련: 최대 1-propanol),rdkit,True,7,77.0
-1-butanol,CCCCO,C4 알코올 (훈련: 최대 1-propanol),ml,True,7,77.0
-1-butanol,CCCCO,C4 알코올 (훈련: 최대 1-propanol),ml_exp,True,8,628.7
-1-butanol,CCCCO,C4 알코올 (훈련: 최대 1-propanol),gnn,True,7,564.8
+1-butanol,CCCCO,C4 알코올 (훈련: 최대 1-propanol),gbm_50,True,7,569.4
+1-butanol,CCCCO,C4 알코올 (훈련: 최대 1-propanol),gbm_full,True,7,569.0
+1-butanol,CCCCO,C4 알코올 (훈련: 최대 1-propanol),gnn_full,True,7,565.3
 acetophenone,CC(=O)c1ccccc1,방향족 케톤 Ar-C=O (훈련 미포함),rdkit,True,4,99.0
-acetophenone,CC(=O)c1ccccc1,방향족 케톤 Ar-C=O (훈련 미포함),ml,True,4,98.0
-acetophenone,CC(=O)c1ccccc1,방향족 케톤 Ar-C=O (훈련 미포함),ml_exp,True,4,613.5
-acetophenone,CC(=O)c1ccccc1,방향족 케톤 Ar-C=O (훈련 미포함),gnn,True,4,600.2
+acetophenone,CC(=O)c1ccccc1,방향족 케톤 Ar-C=O (훈련 미포함),gbm_50,True,4,611.4
+acetophenone,CC(=O)c1ccccc1,방향족 케톤 Ar-C=O (훈련 미포함),gbm_full,True,3,468.5
+acetophenone,CC(=O)c1ccccc1,방향족 케톤 Ar-C=O (훈련 미포함),gnn_full,True,4,608.8
 acrolein,C=CC=O,공액 카보닐 C=C-C=O (훈련 미포함),rdkit,True,5,32.0
-acrolein,C=CC=O,공액 카보닐 C=C-C=O (훈련 미포함),ml,True,4,26.0
-acrolein,C=CC=O,공액 카보닐 C=C-C=O (훈련 미포함),ml_exp,True,8,320.2
-acrolein,C=CC=O,공액 카보닐 C=C-C=O (훈련 미포함),gnn,True,5,217.0
+acrolein,C=CC=O,공액 카보닐 C=C-C=O (훈련 미포함),gbm_50,True,4,176.0
+acrolein,C=CC=O,공액 카보닐 C=C-C=O (훈련 미포함),gbm_full,True,5,209.2
+acrolein,C=CC=O,공액 카보닐 C=C-C=O (훈련 미포함),gnn_full,True,5,216.8
 dimethylsulfoxide,CS(C)=O,설폭사이드 S=O (훈련 미포함),rdkit,True,6,49.0
-dimethylsulfoxide,CS(C)=O,설폭사이드 S=O (훈련 미포함),ml,True,6,45.0
-dimethylsulfoxide,CS(C)=O,설폭사이드 S=O (훈련 미포함),ml_exp,True,5,264.3
-dimethylsulfoxide,CS(C)=O,설폭사이드 S=O (훈련 미포함),gnn,True,5,270.9
+dimethylsulfoxide,CS(C)=O,설폭사이드 S=O (훈련 미포함),gbm_50,True,5,274.3
+dimethylsulfoxide,CS(C)=O,설폭사이드 S=O (훈련 미포함),gbm_full,True,5,259.2
+dimethylsulfoxide,CS(C)=O,설폭사이드 S=O (훈련 미포함),gnn_full,True,5,236.5

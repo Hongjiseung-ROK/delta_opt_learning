@@ -32,9 +32,11 @@ from delta_chem.chem.gaussian_runner import run_gaussian
 from delta_chem.chem.log_parser import parse_log, parse_final_geometry
 
 # ── 모델 경로 ──────────────────────────────────────────────────────────────────
-MODEL_OLD = "models/bond_length_corrector_delta.joblib"           # GBM 50개 분자
-MODEL_EXP = "models/bond_length_corrector_delta_expanded.joblib"  # GBM 120개 분자
-MODEL_GNN = "models/bond_length_corrector_gnn.joblib"             # GNN 120개 분자
+MODEL_OLD  = "models/bond_length_corrector_delta.joblib"           # GBM 50개 분자
+MODEL_EXP  = "models/bond_length_corrector_delta_expanded.joblib"  # GBM 120개 분자
+MODEL_GNN  = "models/bond_length_corrector_gnn.joblib"             # GNN 120개 분자
+MODEL_FULL = "models/bond_length_corrector_delta_full.joblib"      # GBM 659개 분자
+MODEL_GNN_FULL = "models/bond_length_corrector_gnn_full.joblib"    # GNN 659개 분자
 
 # ── 벤치마크 분자 (훈련셋 미포함 확인 완료) ────────────────────────────────────
 MOLECULES = [
@@ -47,10 +49,10 @@ MOLECULES = [
 ]
 
 PIPELINES = [
-    ("rdkit",    None,      None),       # MMFF baseline
-    ("ml",       MODEL_OLD, "gbm"),      # GBM 50개 분자
-    ("ml_exp",   MODEL_EXP, "gbm"),      # GBM 120개 분자
-    ("gnn",      MODEL_GNN, "gnn"),      # GNN 120개 분자
+    ("rdkit",     None,          None),  # MMFF baseline
+    ("gbm_50",    MODEL_OLD,     "gbm"), # GBM 50개 분자
+    ("gbm_full",  MODEL_FULL,    "gbm"), # GBM 659개 분자
+    ("gnn_full",  MODEL_GNN_FULL,"gnn"), # GNN 659개 분자
 ]
 
 OUTDIR = Path("data/raw/benchmark_new")
@@ -210,12 +212,12 @@ def report_and_plot(df: pd.DataFrame) -> None:
 
     # ── 시각화 ──────────────────────────────────────────────────────────────
     pipeline_labels = {
-        "rdkit":  "MMFF (RDKit)",
-        "ml":     "GBM-50",
-        "ml_exp": "GBM-120",
-        "gnn":    "GNN-120",
+        "rdkit":    "MMFF (RDKit)",
+        "gbm_50":   "GBM-50",
+        "gbm_full": "GBM-659",
+        "gnn_full": "GNN-659",
     }
-    colors = {"rdkit": "#5B9BD5", "ml": "#ED7D31", "ml_exp": "#70AD47", "gnn": "#C00000"}
+    colors = {"rdkit": "#5B9BD5", "gbm_50": "#ED7D31", "gbm_full": "#70AD47", "gnn_full": "#C00000"}
 
     conv_mols = [m for m, _, _ in MOLECULES
                  if df[(df["molecule"] == m) & (df["pipeline"] == "rdkit") & df["converged"]].shape[0] > 0]
