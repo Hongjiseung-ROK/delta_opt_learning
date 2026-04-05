@@ -1,177 +1,192 @@
 """
-Data preprocessing pipeline — clean black-line flowchart
-figures/08_preprocessing_pipeline.png
+Pipeline visualization — one image per phase
+figures/08a_phase1_data_collection.png
+figures/08b_phase2_feature_extraction.png
+figures/08c_phase3_ml_training.png
 """
 import matplotlib.pyplot as plt
 import matplotlib.patches as mpatches
-from matplotlib.patches import FancyBboxPatch
 from pathlib import Path
 
 BLACK = "#000000"
 WHITE = "#ffffff"
-GRAY  = "#f0f0f0"   # light fill for file nodes only
+GRAY  = "#eeeeee"
 
-# ── helpers ─────────────────────────────────────────────────────────────────
-def box(ax, cx, cy, w, h, text, dashed=False, fill=WHITE):
-    ls = (0, (4, 3)) if dashed else "solid"
-    rect = mpatches.FancyBboxPatch(
-        (cx - w/2, cy - h/2), w, h,
-        boxstyle="round,pad=0,rounding_size=0.015",
-        facecolor=fill, edgecolor=BLACK, linewidth=1.2,
-        linestyle=ls, zorder=3
-    )
-    ax.add_patch(rect)
-    ax.text(cx, cy, text, fontsize=9, color=BLACK,
-            ha="center", va="center", zorder=4,
-            fontfamily="DejaVu Sans")
+def draw(nodes, edges, title, out_path,
+         figw=5, figh=6, node_w=3.2, node_h=0.55):
+    """
+    nodes : [(cx, cy, text, dashed), ...]
+    edges : [(x1,y1, x2,y2), ...]   straight arrows
+    """
+    fig, ax = plt.subplots(figsize=(figw, figh))
+    ax.set_xlim(0, figw); ax.set_ylim(0, figh)
+    ax.axis("off")
+    fig.patch.set_facecolor(WHITE)
 
-def arr(ax, x1, y1, x2, y2):
-    ax.annotate("",
-        xy=(x2, y2), xytext=(x1, y1),
-        arrowprops=dict(arrowstyle="-|>", color=BLACK, lw=1.0,
-                        mutation_scale=10),
-        zorder=2)
+    ax.set_title(title, fontsize=11, fontweight="bold", color=BLACK, pad=6)
 
-def line(ax, xs, ys):
-    ax.plot(xs, ys, color=BLACK, lw=1.0, zorder=2)
+    for (cx, cy, text, dashed) in nodes:
+        ls   = (0, (5, 3)) if dashed else "solid"
+        fill = GRAY if dashed else WHITE
+        rect = mpatches.FancyBboxPatch(
+            (cx - node_w/2, cy - node_h/2), node_w, node_h,
+            boxstyle="round,pad=0,rounding_size=0.02",
+            facecolor=fill, edgecolor=BLACK, linewidth=1.1,
+            linestyle=ls, zorder=3)
+        ax.add_patch(rect)
+        ax.text(cx, cy, text, fontsize=9, color=BLACK,
+                ha="center", va="center", zorder=4)
 
-def label(ax, x, y, text, fs=8, bold=False):
-    fw = "bold" if bold else "normal"
-    ax.text(x, y, text, fontsize=fs, color=BLACK,
-            ha="center", va="center", fontweight=fw)
+    for (x1, y1, x2, y2) in edges:
+        ax.annotate("", xy=(x2, y2), xytext=(x1, y1),
+                    arrowprops=dict(arrowstyle="-|>", color=BLACK,
+                                    lw=1.0, mutation_scale=10), zorder=2)
 
-def phase_label(ax, x, y, text):
-    ax.text(x, y, text, fontsize=8.5, color=BLACK,
-            ha="center", va="center", fontweight="bold",
-            fontstyle="italic")
+    Path(out_path).parent.mkdir(exist_ok=True)
+    plt.savefig(out_path, dpi=180, bbox_inches="tight",
+                facecolor=WHITE, edgecolor="none")
+    plt.close()
+    print(f"Saved: {out_path}")
 
-def divider(ax, x, y1, y2):
-    ax.plot([x, x], [y1, y2], color=BLACK, lw=0.7,
-            linestyle=(0, (6, 4)), zorder=1)
 
-# ── canvas ───────────────────────────────────────────────────────────────────
-W, H = 13.0, 8.5
-fig, ax = plt.subplots(figsize=(W, H))
-ax.set_xlim(0, W)
-ax.set_ylim(0, H)
+# ── Phase 1 : Data Collection ────────────────────────────────────────────────
+cx = 2.5
+ys = [5.2, 4.2, 3.2, 2.2, 1.2]
+h  = 0.55
+gap = h / 2
+
+draw(
+    nodes=[
+        (cx, ys[0], "SMILES Input",                  False),
+        (cx, ys[1], "RDKit  ETKDGv3 + MMFF",         False),
+        (cx, ys[2], "gaussian_writer.py  →  .com",   False),
+        (cx, ys[3], "Gaussian 09  B3LYP/6-31G(d)",   False),
+        (cx, ys[4], "mol.out",                        True),
+    ],
+    edges=[
+        (cx, ys[0]-gap, cx, ys[1]+gap),
+        (cx, ys[1]-gap, cx, ys[2]+gap),
+        (cx, ys[2]-gap, cx, ys[3]+gap),
+        (cx, ys[3]-gap, cx, ys[4]+gap),
+    ],
+    title="(1)  Data Collection",
+    out_path="figures/08a_phase1_data_collection.png",
+    figw=5, figh=6.2,
+)
+
+
+# ── Phase 2 : Feature Extraction ─────────────────────────────────────────────
+#
+#         mol.out
+#        /       \
+# Input orient.   Std orient.   RDKit topology
+#        \            |         /
+#         Bond Feature Extraction
+#               bond_features.csv
+#
+figw, figh = 6.5, 6.5
+cx  = figw / 2
+nw  = 2.8
+nh  = 0.52
+gap = nh / 2
+
+# x positions for three source boxes
+x1, x2, x3 = 1.3, 3.25, 5.2
+out_y   = 5.6
+src_y   = 4.1
+feat_y  = 2.6
+csv_y   = 1.3
+
+fig, ax = plt.subplots(figsize=(figw, figh))
+ax.set_xlim(0, figw); ax.set_ylim(0, figh)
 ax.axis("off")
 fig.patch.set_facecolor(WHITE)
-ax.set_facecolor(WHITE)
+ax.set_title("(2)  Feature Extraction", fontsize=11,
+             fontweight="bold", color=BLACK, pad=6)
 
-ax.set_title("Data Preprocessing Pipeline",
-             fontsize=13, fontweight="bold", color=BLACK, pad=8)
+def bx(cx, cy, txt, dashed=False, w=nw, h=nh):
+    ls   = (0, (5, 3)) if dashed else "solid"
+    fill = GRAY if dashed else WHITE
+    rect = mpatches.FancyBboxPatch(
+        (cx - w/2, cy - h/2), w, h,
+        boxstyle="round,pad=0,rounding_size=0.02",
+        facecolor=fill, edgecolor=BLACK, linewidth=1.1,
+        linestyle=ls, zorder=3)
+    ax.add_patch(rect)
+    ax.text(cx, cy, txt, fontsize=8.5, color=BLACK,
+            ha="center", va="center", zorder=4)
 
-# ── phase dividers & labels ──────────────────────────────────────────────────
-divider(ax, 4.3,  0.3, H - 0.5)
-divider(ax, 8.6,  0.3, H - 0.5)
+def ar(x1, y1, x2, y2):
+    ax.annotate("", xy=(x2, y2), xytext=(x1, y1),
+                arrowprops=dict(arrowstyle="-|>", color=BLACK,
+                                lw=1.0, mutation_scale=10), zorder=2)
 
-phase_label(ax, 2.15, H - 0.28, "(1)  Data Collection")
-phase_label(ax, 6.45, H - 0.28, "(2)  Feature Extraction")
-phase_label(ax, 10.8, H - 0.28, "(3)  ML Training")
+def ln(xs, ys):
+    ax.plot(xs, ys, color=BLACK, lw=1.0, zorder=2)
 
-# ════════════════════════════════════════════════════════════════════════════
-# PHASE 1 — Data Collection  (x center = 2.15)
-# ════════════════════════════════════════════════════════════════════════════
-BW, BH = 3.2, 0.52
-PX = 2.15
+# mol.out (top center)
+bx(cx, out_y, "mol.out", dashed=True, w=2.0)
 
-Y = [7.5, 6.5, 5.5, 4.4, 3.2]
+# three source boxes
+bx(x1, src_y, "Input orientation\n→  MMFF coords",   w=2.4)
+bx(x2, src_y, "Standard orientation\n→  DFT coords", w=2.4)
+bx(x3, src_y, "RDKit mol\n(hybridization / ring)",    w=2.4)
 
-box(ax, PX, Y[0], BW, BH, "SMILES Input")
-box(ax, PX, Y[1], BW, BH, "RDKit  ETKDGv3 + MMFF")
-box(ax, PX, Y[2], BW, BH, "gaussian_writer.py  →  .com")
-box(ax, PX, Y[3], BW, BH, "Gaussian 09   B3LYP / 6-31G(d)")
-box(ax, PX, Y[4], BW * 0.75, BH, "mol.out", dashed=True, fill=GRAY)
+# mol.out → Input orient  (left branch)
+ln([cx, x1], [out_y - nh/2, out_y - nh/2])
+ar(x1, out_y - nh/2, x1, src_y + nh/2 + 0.15)
 
-arr(ax, PX, Y[0]-BH/2, PX, Y[1]+BH/2)
-arr(ax, PX, Y[1]-BH/2, PX, Y[2]+BH/2)
-arr(ax, PX, Y[2]-BH/2, PX, Y[3]+BH/2)
-arr(ax, PX, Y[3]-BH/2, PX, Y[4]+BH/2)
+# mol.out → Std orient  (center branch)
+ar(cx, out_y - nh/2, x2, src_y + nh/2 + 0.15)
 
-# small note under Gaussian box
-ax.text(PX, Y[3]-BH/2-0.13, "DFT geometry optimization",
-        fontsize=7, color=BLACK, ha="center", va="top", fontstyle="italic")
+# RDKit: independent source, just arrow down from outside
+ax.annotate("", xy=(x3, src_y + nh/2 + 0.15), xytext=(x3, out_y - nh/2),
+            arrowprops=dict(arrowstyle="-|>", color=BLACK,
+                            lw=1.0, mutation_scale=10,
+                            linestyle="dashed"), zorder=2)
+ax.text(x3, (src_y + nh/2 + out_y - nh/2) / 2 + 0.1,
+        "(SMILES)", fontsize=7, color=BLACK, ha="center",
+        va="center", fontstyle="italic")
 
-# ════════════════════════════════════════════════════════════════════════════
-# PHASE 2 — Feature Extraction  (x center = 6.45)
-# ════════════════════════════════════════════════════════════════════════════
-MX = 6.45
-BW2 = 3.6
+# three boxes → Bond Feature Extraction
+bx(cx, feat_y, "Bond Feature Extraction", w=3.4)
+for xi in [x1, x2, x3]:
+    ln([xi, xi], [src_y - nh/2, feat_y + nh/2 + 0.35])
+    ar(xi, feat_y + nh/2 + 0.35, cx - 0.01 if xi < cx else cx + 0.01, feat_y + nh/2)
 
-# mol.out → two parse paths
-OUT_X = PX + BW * 0.75 / 2   # right edge of mol.out box = 2.15 + 0.9 = 3.05
-PARSE_Y1 = 6.3    # Input orientation
-PARSE_Y2 = 5.1    # Standard orientation
-TOPO_Y   = 3.9    # RDKit topology
-FEAT_Y   = 2.7    # Bond Feature Extraction
-CSV_Y    = 1.55   # bond_features.csv
+# Bond Features → csv
+ar(cx, feat_y - nh/2, cx, csv_y + nh/2)
+bx(cx, csv_y, "bond_features.csv", dashed=True, w=2.8)
 
-# arrows from mol.out to parse boxes (via horizontal segment)
-FORK_X = 4.55
-
-# mol.out right → fork point
-line(ax, [PX + BW * 0.75 / 2, FORK_X], [Y[4], Y[4]])
-# fork → Input orientation
-line(ax, [FORK_X, FORK_X], [Y[4], PARSE_Y1])
-arr(ax, FORK_X, PARSE_Y1, MX - BW2/2, PARSE_Y1)
-# fork → Standard orientation
-line(ax, [FORK_X, FORK_X], [Y[4], PARSE_Y2])
-arr(ax, FORK_X, PARSE_Y2, MX - BW2/2, PARSE_Y2)
-
-box(ax, MX, PARSE_Y1, BW2, BH, "Input orientation   →   MMFF coords")
-box(ax, MX, PARSE_Y2, BW2, BH, "Standard orientation  →   DFT coords")
-box(ax, MX, TOPO_Y,   BW2, BH, "RDKit mol  (hybridization / ring info)")
-
-# arrows into Bond Feature Extraction
-arr(ax, MX, PARSE_Y1 - BH/2, MX, FEAT_Y + BH/2 + 0.5)
-arr(ax, MX, PARSE_Y2 - BH/2, MX, FEAT_Y + BH/2 + 0.08)
-arr(ax, MX, TOPO_Y   - BH/2, MX, FEAT_Y + BH/2)
-
-box(ax, MX, FEAT_Y, BW2, BH, "Bond Feature Extraction   (per bond)")
-arr(ax, MX, FEAT_Y - BH/2, MX, CSV_Y + BH/2)
-box(ax, MX, CSV_Y, BW2 * 0.7, BH, "bond_features.csv", dashed=True, fill=GRAY)
-
-# small note: dataset size
-ax.text(MX, CSV_Y - BH/2 - 0.13, "529 bonds  /  49 molecules",
-        fontsize=7, color=BLACK, ha="center", va="top", fontstyle="italic")
-
-# ════════════════════════════════════════════════════════════════════════════
-# PHASE 3 — ML Training  (x center = 10.8)
-# ════════════════════════════════════════════════════════════════════════════
-RX = 10.8
-BW3 = 3.6
-
-ML_Y = [7.2, 6.1, 5.0, 3.9, 2.7, 1.55]
-ml_labels = [
-    "Target :  dft_length  -  mmff_length",
-    "OrdinalEncoder",
-    "GradientBoostingRegressor",
-    "5-Fold Cross Validation",
-    "CV MAE = 0.0022  ±  0.0004  A",
-    "models / *.joblib",
-]
-
-# csv → ML phase (horizontal then up)
-CSV_RIGHT = MX + BW2 * 0.7 / 2
-line(ax, [CSV_RIGHT, RX - BW3/2 - 0.05], [CSV_Y, CSV_Y])
-arr(ax, RX - BW3/2 - 0.05, CSV_Y, RX - BW3/2, ML_Y[-1])
-
-for i, (y, txt) in enumerate(zip(ML_Y, ml_labels)):
-    dashed = (i == len(ML_Y) - 1)
-    fill   = GRAY if dashed else WHITE
-    box(ax, RX, y, BW3, BH, txt, dashed=dashed, fill=fill)
-    if i < len(ML_Y) - 1:
-        arr(ax, RX, y - BH/2, RX, ML_Y[i+1] + BH/2)
-
-# note under GBR
-ax.text(RX, ML_Y[2] - BH/2 - 0.13,
-        "n_estimators=300   max_depth=4   lr=0.05",
-        fontsize=7, color=BLACK, ha="center", va="top", fontstyle="italic")
-
-# ── save ─────────────────────────────────────────────────────────────────────
-out = Path("figures/08_preprocessing_pipeline.png")
-out.parent.mkdir(exist_ok=True)
-plt.savefig(out, dpi=180, bbox_inches="tight",
-            facecolor=WHITE, edgecolor="none")
+plt.savefig("figures/08b_phase2_feature_extraction.png",
+            dpi=180, bbox_inches="tight", facecolor=WHITE, edgecolor="none")
 plt.close()
-print(f"Saved: {out}")
+print("Saved: figures/08b_phase2_feature_extraction.png")
+
+
+# ── Phase 3 : ML Training ────────────────────────────────────────────────────
+cx = 2.5
+ys3 = [5.5, 4.5, 3.5, 2.5, 1.5, 0.6]
+h   = 0.55
+gap = h / 2
+
+draw(
+    nodes=[
+        (cx, ys3[0], "bond_features.csv",              True),
+        (cx, ys3[1], "Target :  dft_length - mmff_length", False),
+        (cx, ys3[2], "OrdinalEncoder  +  GradientBoosting", False),
+        (cx, ys3[3], "5-Fold Cross Validation",        False),
+        (cx, ys3[4], "CV MAE = 0.0022 ± 0.0004  Å",   False),
+        (cx, ys3[5], "models / *.joblib",               True),
+    ],
+    edges=[
+        (cx, ys3[0]-gap, cx, ys3[1]+gap),
+        (cx, ys3[1]-gap, cx, ys3[2]+gap),
+        (cx, ys3[2]-gap, cx, ys3[3]+gap),
+        (cx, ys3[3]-gap, cx, ys3[4]+gap),
+        (cx, ys3[4]-gap, cx, ys3[5]+gap),
+    ],
+    title="(3)  ML Training",
+    out_path="figures/08c_phase3_ml_training.png",
+    figw=5, figh=6.5,
+)
