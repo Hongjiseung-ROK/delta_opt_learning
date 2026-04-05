@@ -66,19 +66,19 @@ title(ax, "(1)  Data Collection")
 
 CY  = FH / 2
 BW  = 2.2
-GAP = 0.35   # gap between box edge and arrow tip
+BH  = 0.85   # taller boxes to accommodate two-line text
 XS  = [1.4, 3.9, 6.4, 8.9, 11.5]
 
 labels = [
-    ("SMILES Input",               False),
-    ("RDKit  ETKDGv3 + MMFF",      False),
-    ("gaussian_writer.py",         False),
-    ("Gaussian 09  B3LYP/6-31G(d)", False),
-    ("mol.out",                     True),
+    ("SMILES Input",                False),
+    ("RDKit\nETKDGv3 + MMFF",       False),
+    ("gaussian_writer.py",          False),
+    ("Gaussian 09\nB3LYP/6-31G(d)", False),
+    ("mol.out",                      True),
 ]
 
 for x, (txt, dashed) in zip(XS, labels):
-    bx(ax, x, CY, txt, w=BW, dashed=dashed)
+    bx(ax, x, CY, txt, w=BW, h=BH, dashed=dashed)
 
 for i in range(len(XS) - 1):
     arr(ax, XS[i] + BW/2, CY, XS[i+1] - BW/2, CY)
@@ -89,64 +89,74 @@ save("figures/08a_phase1_data_collection.png")
 # ════════════════════════════════════════════════════════════════════════════
 # Phase 2 — Feature Extraction
 #
-#                        ┌─→ [Input orientation → MMFF coords] ─────┐
-#  [mol.out] ────────────┤                                           │
-#                        └─→ [Std orientation  → DFT coords ] ──────┤──→ [Bond Feature Extraction] ──→ [bond_features.csv]
-#  [SMILES]  ──→ [RDKit mol (hybridization / ring)] ────────────────┘
+#  All arrowheads point RIGHT only.
+#  Vertical segments are plain lines (no arrowhead).
 #
+#  [mol.out] ─F─────────────→ [Input orientation → MMFF coords] ─┐M
+#              │                                                    │ │
+#              └─────────────→ [Std orientation  → DFT coords ] ──┤ ├──→ [Bond Feature] ──→ [csv]
+#                                                                   │ │
+#  [SMILES]  ──────────────→ [RDKit mol (hybridization / ring)] ──┘ │
+#
+# F = fork point (vertical connector, no arrowhead)
+# M = merge point (vertical collector, no arrowhead), one arrow goes right
 # ════════════════════════════════════════════════════════════════════════════
 fig, ax = make_fig()
 title(ax, "(2)  Feature Extraction")
 
-BW2  = 2.9
-HH   = 0.65   # box height
+SRC_W  = 1.8    # mol.out / SMILES box width
+PARSE_W = 3.0   # parse box width
+FEAT_W  = 2.4   # Bond Feature Extraction width
+CSV_W   = 2.0   # csv width
+HH      = 0.72  # box height
 
-# X positions
-X_out  = 1.3    # mol.out
-X_smi  = 1.3    # SMILES  (below mol.out)
-X_inp  = 4.7    # Input orientation
-X_std  = 4.7    # Std orientation
-X_rdk  = 4.7    # RDKit mol
-X_feat = 8.8    # Bond Feature Extraction
-X_csv  = 12.0   # bond_features.csv
+# X centers
+X_src   = 1.2
+FORK_X  = X_src + SRC_W/2 + 0.35          # fork junction
+X_parse = 5.4                               # parse boxes center
+MERGE_X = X_parse + PARSE_W/2 + 0.3        # merge junction
+X_feat  = MERGE_X + 0.3 + FEAT_W/2 + 0.5
+X_csv   = X_feat + FEAT_W/2 + 0.4 + CSV_W/2
 
-# Y positions
-Y_top = 3.2   # mol.out & Input orientation row
-Y_mid = 2.25  # Standard orientation row
-Y_bot = 1.3   # SMILES / RDKit mol row
+# Y rows
+Y_top = 3.4
+Y_mid = 2.25
+Y_bot = 1.1
 
-# Source boxes
-bx(ax, X_out, Y_top, "mol.out",  w=1.8, h=HH, dashed=True)
-bx(ax, X_smi, Y_bot, "SMILES",   w=1.8, h=HH)
+# ── source boxes ────────────────────────────────────────────
+bx(ax, X_src, Y_top, "mol.out", w=SRC_W, h=HH, dashed=True)
+bx(ax, X_src, Y_bot, "SMILES",  w=SRC_W, h=HH)
 
-# Parse / topology boxes
-bx(ax, X_inp, Y_top, "Input orientation  →  MMFF coords",  w=BW2, h=HH)
-bx(ax, X_std, Y_mid, "Standard orientation  →  DFT coords", w=BW2, h=HH)
-bx(ax, X_rdk, Y_bot, "RDKit mol  (hybridization / ring)",   w=BW2, h=HH)
+# ── parse / topology boxes ───────────────────────────────────
+bx(ax, X_parse, Y_top, "Input orientation  →  MMFF coords",   w=PARSE_W, h=HH)
+bx(ax, X_parse, Y_mid, "Standard orientation  →  DFT coords", w=PARSE_W, h=HH)
+bx(ax, X_parse, Y_bot, "RDKit mol  (hybridization / ring)",   w=PARSE_W, h=HH)
 
-# mol.out → Input orientation (straight right)
-arr(ax, X_out + 1.8/2, Y_top, X_inp - BW2/2, Y_top)
+# ── mol.out fork (no downward arrowhead) ─────────────────────
+#    horizontal line: mol.out right → FORK_X  (Y_top)
+ln(ax, [X_src + SRC_W/2, FORK_X], [Y_top, Y_top])
+#    vertical connector: FORK_X from Y_top down to Y_mid
+ln(ax, [FORK_X, FORK_X], [Y_mid, Y_top])
+#    right arrows from FORK_X to each parse box
+arr(ax, FORK_X, Y_top, X_parse - PARSE_W/2, Y_top)   # → Input orientation
+arr(ax, FORK_X, Y_mid, X_parse - PARSE_W/2, Y_mid)   # → Std orientation
 
-# mol.out → Standard orientation (down then right)
-FORK_X = X_out + 1.8/2 + 0.25
-ln(ax, [X_out + 1.8/2, FORK_X], [Y_top, Y_top])
-ln(ax, [FORK_X, FORK_X], [Y_top, Y_mid])
-arr(ax, FORK_X, Y_mid, X_std - BW2/2, Y_mid)
+# ── SMILES → RDKit mol ───────────────────────────────────────
+arr(ax, X_src + SRC_W/2, Y_bot, X_parse - PARSE_W/2, Y_bot)
 
-# SMILES → RDKit mol (straight right)
-arr(ax, X_smi + 1.8/2, Y_bot, X_rdk - BW2/2, Y_bot)
-
-# Convergence: three parse boxes → Bond Feature Extraction
-bx(ax, X_feat, Y_mid, "Bond Feature Extraction", w=2.6, h=HH)
-MERGE_X = X_inp + BW2/2 + 0.2
+# ── merge (no arrowhead on collector lines) ───────────────────
+#    horizontal lines: each parse box right → MERGE_X
 for yi in [Y_top, Y_mid, Y_bot]:
-    ln(ax, [X_inp + BW2/2, MERGE_X], [yi, yi])
+    ln(ax, [X_parse + PARSE_W/2, MERGE_X], [yi, yi])
+#    vertical collector at MERGE_X
 ln(ax, [MERGE_X, MERGE_X], [Y_bot, Y_top])
-arr(ax, MERGE_X, Y_mid, X_feat - 2.6/2, Y_mid)
+#    single right arrow from MERGE_X mid → Bond Feature Extraction
+bx(ax, X_feat, Y_mid, "Bond Feature Extraction", w=FEAT_W, h=HH)
+arr(ax, MERGE_X, Y_mid, X_feat - FEAT_W/2, Y_mid)
 
-# Bond Feature Extraction → csv
-bx(ax, X_csv, Y_mid, "bond_features.csv", w=2.2, h=HH, dashed=True)
-arr(ax, X_feat + 2.6/2, Y_mid, X_csv - 2.2/2, Y_mid)
+# ── Bond Feature Extraction → csv ────────────────────────────
+bx(ax, X_csv, Y_mid, "bond_features.csv", w=CSV_W, h=HH, dashed=True)
+arr(ax, X_feat + FEAT_W/2, Y_mid, X_csv - CSV_W/2, Y_mid)
 
 save("figures/08b_phase2_feature_extraction.png")
 
